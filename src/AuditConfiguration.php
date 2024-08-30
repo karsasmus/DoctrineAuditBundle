@@ -10,13 +10,13 @@ namespace Kricha\DoctrineAuditBundle;
 
 class AuditConfiguration
 {
-    private $tablePrefix;
+    private string $tablePrefix;
 
-    private $tableSuffix;
+    private string $tableSuffix;
 
-    private $ignoredColumns;
+    private array $ignoredColumns = [];
 
-    private $entities = [];
+    private array $entities = [];
 
     /**
      * @var callable
@@ -41,7 +41,7 @@ class AuditConfiguration
      *
      * @param object|string $entity
      */
-    public function isAuditable($entity): bool
+    public function isAuditable(object|string $entity): bool
     {
         $class = Helper::getRealClass($entity);
         // is $entity part of audited entities?
@@ -58,7 +58,7 @@ class AuditConfiguration
      *
      * @param object|string $entity
      */
-    public function isAudited($entity): bool
+    public function isAudited(object|string $entity): bool
     {
         $class = Helper::getRealClass($entity);
         // is $entity part of audited entities?
@@ -75,7 +75,7 @@ class AuditConfiguration
      *
      * @param object|string $entity
      */
-    public function isAuditedField($entity, string $field): bool
+    public function isAuditedField(object|string $entity, string $field): bool
     {
         // is $field is part of globally ignored columns?
         if (\in_array($field, $this->ignoredColumns, true)) {

@@ -5,14 +5,10 @@ services:
         public: false
     Kricha\DoctrineAuditBundle\Controller\AuditController:
         tags: ['controller.service_arguments']
-    Kricha\DoctrineAuditBundle\EventSubscriber\AuditSubscriber:
+    Kricha\DoctrineAuditBundle\EventSubscriber\FlushListener:
         arguments: ['@Kricha\DoctrineAuditBundle\AuditManager']
-        tags:
-            - { name: doctrine.event_subscriber, connection: default }
     Kricha\DoctrineAuditBundle\EventSubscriber\SchemaAuditSubscriber:
         arguments: ['@Kricha\DoctrineAuditBundle\AuditManager']
-        tags:
-            - { name: doctrine.event_subscriber, connection: default }
     Kricha\DoctrineAuditBundle\Reader\AuditReader:
         arguments: ['@Kricha\DoctrineAuditBundle\AuditConfiguration', '@Doctrine\ORM\EntityManagerInterface', '%kricha_doctrine_audit.configuration%']
 

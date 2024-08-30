@@ -8,14 +8,17 @@ declare(strict_types=1);
 
 namespace Kricha\DoctrineAuditBundle\EventSubscriber;
 
+use Doctrine\Bundle\DoctrineBundle\Attribute\AsDoctrineListener;
 use Doctrine\Common\EventSubscriber;
 use Doctrine\DBAL\Types\Types;
-use Doctrine\ORM\Mapping\ClassMetadataInfo;
+use Doctrine\ORM\Events;
+use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\ORM\Tools\Event\GenerateSchemaTableEventArgs;
 use Doctrine\ORM\Tools\ToolEvents;
 use Kricha\DoctrineAuditBundle\AuditManager;
 
-class SchemaAuditSubscriber implements EventSubscriber
+#[AsDoctrineListener(ToolEvents::postGenerateSchemaTable)]
+class SchemaAuditSubscriber
 {
     private const AUDIT_TABLE_COLUMNS = [
         'id'         => [
@@ -79,11 +82,8 @@ class SchemaAuditSubscriber implements EventSubscriber
         ],
     ];
 
-    private $manager;
-
-    public function __construct(AuditManager $manager)
+    public function __construct(private AuditManager $manager)
     {
-        $this->manager = $manager;
     }
 
     public function postGenerateSchemaTable(GenerateSchemaTableEventArgs $eventArgs): void
@@ -94,7 +94,7 @@ class SchemaAuditSubscriber implements EventSubscriber
             if ($cm->rootEntityName === $cm->name && ($cm->isInheritanceTypeJoined(
                     ) || $cm->isInheritanceTypeSingleTable())) {
                 foreach ($cm->subClasses as $subClass) {
-                    if ($this->manager->getConfiguration()->isAudited($subClass)) {
+                    if ($this->manager->getAuditConfiguration()->isAudited($subClass)) {
                         $audited = true;
                     }
                 }
@@ -106,9 +106,9 @@ class SchemaAuditSubscriber implements EventSubscriber
         if (!\in_array(
             $cm->inheritanceType,
             [
-                ClassMetadataInfo::INHERITANCE_TYPE_NONE,
-                ClassMetadataInfo::INHERITANCE_TYPE_JOINED,
-                ClassMetadataInfo::INHERITANCE_TYPE_SINGLE_TABLE,
+                ClassMetadata::INHERITANCE_TYPE_NONE,
+                ClassMetadata::INHERITANCE_TYPE_JOINED,
+                ClassMetadata::INHERITANCE_TYPE_SINGLE_TABLE,
             ],
             true
         )) {
@@ -137,16 +137,9 @@ class SchemaAuditSubscriber implements EventSubscriber
                 if ('primary' === $struct['type']) {
                     $auditTable->setPrimaryKey([$column]);
                 } else {
-                    $auditTable->addIndex([$column], "${column}_${auditTableNameMD5}_idx");
+                    $auditTable->addIndex([$column], sprintf('%s_%s_%s', $column, $auditTableNameMD5, 'idx'));
                 }
             }
         }
-    }
-
-    public function getSubscribedEvents(): array
-    {
-        return [
-            ToolEvents::postGenerateSchemaTable,
-        ];
     }
 }

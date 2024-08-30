@@ -8,11 +8,11 @@ declare(strict_types=1);
 
 namespace Kricha\DoctrineAuditBundle;
 
-use Doctrine\ORM\Proxy\Proxy;
+use Doctrine\Persistence\Proxy;
 
 class Helper
 {
-    public static function getRealClass($subject): string
+    public static function getRealClass(object|string $subject): string
     {
         $class = \is_object($subject) ? \get_class($subject) : $subject;
         if (false === $pos = \strrpos($class, '\\'.Proxy::MARKER.'\\')) {

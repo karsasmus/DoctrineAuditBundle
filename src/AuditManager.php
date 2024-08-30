@@ -346,7 +346,7 @@ class AuditManager
             $em->getConnection()->transactional(function (Connection $connection) use ($queries): void {
                 foreach ($queries as $query) {
                     $stmt = $connection->prepare($query[0]);
-                    $stmt->execute($query[1]);
+                    $stmt->executeStatement($query[1]);
                 }
             });
         }

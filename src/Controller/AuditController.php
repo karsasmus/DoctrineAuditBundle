@@ -17,9 +17,7 @@ use Symfony\Component\Routing\Annotation\Route;
 
 class AuditController extends AbstractController
 {
-    /**
-     * @Route("/audit", name="kricha_doctrine_entity_audit_list", methods={"GET"})
-     */
+    #[Route('/audit', name: 'kricha_doctrine_entity_audit_list', methods: ['GET'])]
     public function listAuditsAction(AuditReader $auditReader): Response
     {
         $auditedEntities = $auditReader->getEntities();
@@ -30,11 +28,8 @@ class AuditController extends AbstractController
         ]);
     }
 
-    /**
-     * @Route("/audit/{entity}/{id}", name="kricha_doctrine_entity_audit_history", methods={"GET"})
-     *
-     * @param int|string $id
-     */
+
+     #[Route("/audit/{entity}/{id}", name: "kricha_doctrine_entity_audit_history", methods: ["GET"])]
     public function showEntityHistoryAction(Request $request, AuditReader $auditReader, string $entity, $id = null): Response
     {
         $page   = (int) $request->query->get('page', 1);
@@ -50,11 +45,8 @@ class AuditController extends AbstractController
         ]);
     }
 
-    /**
-     * @Route("/audit/details/{entity}/{id}", name="kricha_doctrine_entity_audit_entry", methods={"GET"})
-     *
-     * @param int|string $id
-     */
+
+    #[Route("/audit/details/{entity}/{id}", name: "kricha_doctrine_entity_audit_entry", methods:["GET"])]
     public function showAuditEntryAction(AuditReader $auditReader, string $entity, $id): Response
     {
         $entity = Helper::paramToNamespace($entity);

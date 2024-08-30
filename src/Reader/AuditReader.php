@@ -8,9 +8,11 @@ declare(strict_types=1);
 
 namespace Kricha\DoctrineAuditBundle\Reader;
 
+use Doctrine\DBAL\Exception;
 use Doctrine\DBAL\Query\QueryBuilder;
 use Doctrine\DBAL\Statement;
 use Doctrine\ORM\EntityManagerInterface;
+use Generator;
 use Kricha\DoctrineAuditBundle\AuditConfiguration;
 use Pagerfanta\Doctrine\DBAL\SingleTableQueryAdapter;
 use Pagerfanta\Pagerfanta;
@@ -19,19 +21,16 @@ class AuditReader
 {
     public const PAGE_SIZE = 50;
 
-    private $configuration;
+    private ?string $filter = null;
 
-    private $entityManager;
+    private ?string $changerRoute = null;
 
-    private $filter;
-
-    private $changerRoute;
-
-    public function __construct(AuditConfiguration $configuration, EntityManagerInterface $entityManager, array $bundleConfig)
+    public function __construct(
+        private AuditConfiguration $configuration,
+        private EntityManagerInterface $entityManager,
+        array $bundleConfig)
     {
         $this->changerRoute  = $bundleConfig['changer_route'] ?? null;
-        $this->configuration = $configuration;
-        $this->entityManager = $entityManager;
     }
 
     public function getChangerRoute(): ?string
@@ -80,16 +79,22 @@ class AuditReader
      * Returns an array of audited entries/operations.
      *
      * @param object|string $entity
-     * @param int|string    $id
+     * @param int|string|null $id
+     * @param int|null $page
+     * @param int|null $pageSize
+     * @return Generator
+     * @throws Exception
      */
-    public function getAudits($entity, $id = null, ?int $page = null, ?int $pageSize = null): array
+    public function getAudits(
+        object|string $entity,
+        int|string $id = null,
+        ?int $page = null,
+        ?int $pageSize = null
+    ): Generator
     {
         $queryBuilder = $this->getAuditsQueryBuilder($entity, $id, $page, $pageSize);
 
-        /** @var Statement $statement */
-        $statement = $queryBuilder->execute();
-
-        return $statement->fetchAll();
+        return $queryBuilder->executeQuery()->iterateAssociative();
     }
 
     /**
@@ -100,7 +105,7 @@ class AuditReader
      * @param null|int      $page
      * @param null|int      $pageSize
      */
-    public function getAuditsPager($entity, $id = null, int $page = 1, int $pageSize = self::PAGE_SIZE): Pagerfanta
+    public function getAuditsPager(object|string $entity, int|string $id = null, int $page = 1, int $pageSize = self::PAGE_SIZE): Pagerfanta
     {
         $queryBuilder = $this->getAuditsQueryBuilder($entity, $id);
 
@@ -123,26 +128,22 @@ class AuditReader
      *
      * @throws \Doctrine\ORM\NonUniqueResultException
      */
-    public function getAuditsCount($entity, $id = null): int
+    public function getAuditsCount(object|string $entity, int|string $id = null): int
     {
+        $this->entityManager->createQueryBuilder();
         $queryBuilder = $this->getAuditsQueryBuilder($entity, $id);
 
         $result = $queryBuilder
-            ->resetQueryPart('select')
-            ->resetQueryPart('orderBy')
-            ->select('COUNT(1)')
-            ->execute()
-            ->fetchOne()
-        ;
+            ->executeQuery()->fetchAssociative();
 
-        return (int) $result;
+        return (int) count($result);
     }
 
     /**
      * @param object|string $entity
      * @param int|string    $id
      */
-    public function getAudit($entity, $id)
+    public function getAudit(object|string $entity, int|string $id): Generator
     {
         $connection = $this->entityManager->getConnection();
         $schema     = $this->entityManager->getClassMetadata(\is_string($entity) ? $entity : \get_class($entity))->getSchemaName();
@@ -172,10 +173,8 @@ class AuditReader
             ;
         }
 
-        /** @var Statement $statement */
-        $statement = $queryBuilder->execute();
 
-        return $statement->fetchAll();
+        return $queryBuilder->executeQuery()->iterateAssociative();
     }
 
     /**
@@ -183,7 +182,7 @@ class AuditReader
      *
      * @param object|string $entity
      */
-    public function getEntityTableName($entity): string
+    public function getEntityTableName(object|string $entity): string
     {
         return $this
             ->entityManager
@@ -200,7 +199,7 @@ class AuditReader
      * @param int           $page
      * @param int           $pageSize
      */
-    private function getAuditsQueryBuilder($entity, $id = null, ?int $page = null, ?int $pageSize = null): QueryBuilder
+    private function getAuditsQueryBuilder(object|string $entity, int|string $id = null, ?int $page = null, ?int $pageSize = null): QueryBuilder
     {
         if (null !== $page && $page < 1) {
             throw new \InvalidArgumentException('$page must be greater or equal than 1.');
